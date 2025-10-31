@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>YannDeploy v2 — Cyber Deploy</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+  :root{--magenta:#ff00ff;--cyan:#00ffff;--bg1:#070015;--bg2:#000;}
+  html,body{height:100%;margin:0;font-family:Orbitron,system-ui,Segoe UI,Roboto,Arial;}
+  body{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 10% 20%, rgba(138,43,226,0.08), transparent 20%),radial-gradient(circle at 90% 80%, rgba(0,255,255,0.04), transparent 20%),linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6e6ff;overflow:hidden;}
+  .grid{position:fixed;inset:0;opacity:0.12;background-image:linear-gradient(90deg, rgba(255,0,255,0.08) 1px, transparent 1px),linear-gradient(0deg, rgba(0,255,255,0.06) 1px, transparent 1px);background-size:40px 40px,40px 40px;animation:move 18s linear infinite;mix-blend-mode:screen;}
+  @keyframes move{from{background-position:0 0,0 0}to{background-position:400px 400px,-400px -400px}}
+  .card{position:relative;z-index:2;width:360px;padding:28px;border-radius:14px;background:linear-gradient(180deg, rgba(20,0,40,0.75), rgba(10,0,30,0.6));box-shadow:0 8px 40px rgba(0,0,0,0.6),inset 0 0 30px rgba(138,43,226,0.06);border:1px solid rgba(0,255,255,0.08);backdrop-filter: blur(6px);}
+  h1{margin:0 0 10px;font-size:20px;color:var(--magenta);text-shadow:0 0 12px var(--cyan),0 0 24px var(--magenta);}
+  .subtitle{font-size:12px;margin-bottom:14px;color:rgba(200,200,255,0.85);}
+  input[type="text"], input[type="file"]{width:100%;padding:10px;border-radius:8px;border:none;margin-bottom:10px;background:rgba(255,255,255,0.04);color:var(--cyan);outline:none;text-align:center;}
+  button{width:100%;padding:12px;border-radius:10px;border:none;font-weight:700;background:linear-gradient(90deg,var(--cyan),var(--magenta));cursor:pointer;box-shadow:0 0 18px rgba(0,255,255,0.12);color:#001;letter-spacing:0.6px;}
+  button:disabled{opacity:0.6;cursor:not-allowed;}
+  .progress-bar{width:100%;height:10px;background:rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;margin-top:12px;display:none;}
+  .progress{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--magenta));box-shadow:0 0 12px rgba(0,255,255,0.12);transition:width 0.2s ease;}
+  .result{margin-top:14px;font-size:13px;color:rgba(230,230,255,0.95);word-break:break-word;}
+  .deploy-link{display:inline-block;margin-top:10px;padding:8px 14px;border-radius:8px;text-decoration:none;color:#001;background:linear-gradient(90deg,var(--cyan),var(--magenta));box-shadow:0 0 18px rgba(0,255,255,0.12);}
+  footer{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--cyan);text-shadow:0 0 6px var(--magenta);z-index:3}
+  .welcome{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:14px;color:#8a2be2;text-shadow:0 0 10px var(--magenta);z-index:3;}
+  @media (max-width:420px){.card{width:92%;padding:18px}}
+</style>
+</head>
+<body>
+  <div class="grid" aria-hidden="true"></div>
+  <div class="welcome">⚡ Welcome to <strong>YannDeploy</strong> ⚡</div>
+
+  <main class="card" role="main" aria-labelledby="title">
+    <h1 id="title">YannDeploy — Cyber Deploy</h1>
+    <div class="subtitle">Upload ZIP project &amp; deploy otomatis ke Vercel</div>
+
+    <input id="projectName" type="text" placeholder="Nama proyek (contoh: my-site)">
+    <input id="zipFile" type="file" accept=".zip" aria-label="Upload ZIP file">
+    <button id="deployBtn" onclick="startDeploy()">Deploy Sekarang</button>
+
+    <div class="progress-bar" id="progressBar"><div class="progress" id="progress"></div></div>
+    <div class="result" id="result" aria-live="polite"></div>
+  </main>
+
+  <footer>Created by <strong>YannDev</strong></footer>
+
+<script>
+function startDeploy(){
+  const nameEl = document.getElementById('projectName');
+  const fileEl = document.getElementById('zipFile');
+  const btn = document.getElementById('deployBtn');
+  const result = document.getElementById('result');
+  const progressBar = document.getElementById('progressBar');
+  const progress = document.getElementById('progress');
+
+  const project = nameEl.value.trim();
+  const file = fileEl.files[0];
+  if(!project || !file){ alert('Isi nama proyek dan pilih file ZIP!'); return; }
+
+  btn.disabled = true;
+  result.textContent = '🚀 Mengunggah dan melakukan deploy...';
+  progressBar.style.display = 'block';
+  progress.style.width = '0%';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('name', project);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/deploy', true); // call Express endpoint
+  xhr.upload.onprogress = function(e){
+    if(e.lengthComputable){
+      const pct = Math.floor((e.loaded / e.total) * 100);
+      progress.style.width = pct + '%';
+    }
+  };
+
+  xhr.onload = function(){
+    btn.disabled = false;
+    if(xhr.status >=200 && xhr.status < 300){
+      try{
+        const data = JSON.parse(xhr.responseText);
+        if(data.url){
+          result.innerHTML = '✅ Deploy sukses!<br>';
+          const a = document.createElement('a');
+          a.href = 'https://' + data.url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.className = 'deploy-link';
+          a.textContent = '🌐 Buka Hasil Deploy';
+          result.appendChild(a);
+        } else {
+          result.textContent = '❌ Gagal: ' + (data.error || JSON.stringify(data));
+        }
+      }catch(err){
+        result.textContent = '❌ Response parse error';
+      }
+    } else {
+      result.textContent = '⚠️ Server error: ' + xhr.status + ' — ' + xhr.responseText;
+    }
+  };
+
+  xhr.onerror = function(){
+    btn.disabled = false;
+    result.textContent = '⚠️ Network error';
+  };
+
+  xhr.send(formData);
+}
+</script>
+</body>
+</html>
