@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YannDev | Cyberpunk</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="neon-text">Welcome to YannDev</h1>
+      <p class="subtitle">Cyberpunk vibes • Powered by Vercel 🚀</p>
+      <button class="neon-btn" onclick="sayHello()">Explore</button>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
